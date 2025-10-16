@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kite AI Flappy Bird</title>
+  <style>
+    body {
+      background: #f4f0e8;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    #gameContainer {
+      position: relative;
+      display: inline-block;
+      margin-top: 20px;
+    }
+    #gameCanvas {
+      background: url('./generated-image-3.jpg');
+      background-size: cover;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto;
+    }
+    #playButton {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      padding: 12px 24px;
+      cursor: pointer;
+      background-color: #a6947a;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      display: block;
+      z-index: 3;
+    }
+    #scoreDisplay {
+      margin-top: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #6b5e4a;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="480" height="640"></canvas>
+    <button id="playButton">Play</button>
+    <div id="scoreDisplay">Score: 0</div>
+  </div>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const playButton = document.getElementById('playButton');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+
+    let gameRunning = false;
+    let score = 0;
+    let bird;
+    let pipes = [];
+    let gravity = 0.6;
+    let flapPower = -10;
+    let pipeSpeed = 3;
+    let pipeGap = 150;
+    let pipeWidth = 60;
+    let birdSize = 48;
+    let frameCount = 0;
+
+    // Load bird image
+    const birdImg = new Image();
+    birdImg.src = "./generated-image-2.jpg";
+
+    // Load pipe image
+    const pipeImg = new Image();
+    pipeImg.src = "./generated-image-3.jpg";
+
+    function Bird() {
+      this.x = 80;
+      this.y = canvasHeight / 2;
+      this.velocity = 0;
+
+      this.draw = function () {
+        ctx.drawImage(birdImg, this.x, this.y, birdSize, birdSize);
+      };
+
+      this.update = function () {
+        this.velocity += gravity;
+        this.y += this.velocity;
+        if (this.y + birdSize > canvasHeight) {
+          this.y = canvasHeight - birdSize;
+          this.velocity = 0;
+        }
+        if (this.y < 0) {
+          this.y = 0;
+          this.velocity = 0;
+        }
+      };
+
+      this.flap = function () {
+        this.velocity = flapPower;
+      };
+    }
+
+    function Pipe(x, y, height, isTop) {
+      this.x = x;
+      this.y = y;
+      this.width = pipeWidth;
+      this.height = height;
+      this.isTop = isTop;
+
+      this.draw = function () {
+        ctx.save();
+        if (isTop) {
+          // Clip and draw pipe from image for top pipe
+          ctx.drawImage(pipeImg, 300, 100, 60, 400, this.x, this.y, this.width, this.height);
+        } else {
+          // Clip and draw pipe from image for bottom pipe
+          ctx.drawImage(pipeImg, 200, 300, 60, 400, this.x, this.y, this.width, this.height);
+        }
+        ctx.restore();
+      };
+
+      this.update = function () {
+        this.x -= pipeSpeed;
+      };
+    }
+
+    function resetGame() {
+      score = 0;
+      bird = new Bird();
+      pipes = [];
+      frameCount = 0;
+      gameRunning = true;
+      scoreDisplay.textContent = 'Score: 0';
+      playButton.style.display = 'none';
+    }
+
+    function drawScore() {
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+
+    function checkCollision(pipe) {
+      if (
+        bird.x < pipe.x + pipe.width &&
+        bird.x + birdSize > pipe.x &&
+        bird.y < pipe.y + pipe.height &&
+        bird.y + birdSize > pipe.y
+      ) {
+        return true;
+      }
+      return false;
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      playButton.style.display = 'block';
+      alert('Game Over! Your score: ' + score);
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+      // Bird
+      bird.update();
+      bird.draw();
+
+      // Pipes
+      if (frameCount % 90 === 0) {
+        const pipeHeightTop = Math.random() * (canvasHeight - pipeGap - 100) + 50;
+        const pipeHeightBottom = canvasHeight - pipeGap - pipeHeightTop;
+        pipes.push(new Pipe(canvasWidth, 0, pipeHeightTop, true));
+        pipes.push(new Pipe(canvasWidth, canvasHeight - pipeHeightBottom, pipeHeightBottom, false));
+      }
+
+      pipes.forEach((pipe, index) => {
+        pipe.update();
+        pipe.draw();
+
+        if (pipe.x + pipe.width < 0) {
+          pipes.splice(index, 1);
+        }
+
+        if (checkCollision(pipe)) {
+          gameOver();
+        }
+
+        if (pipe.isTop && pipe.x + pipe.width < bird.x && !pipe.passed) {
+          score++;
+          pipe.passed = true;
+          drawScore();
+        }
+      });
+
+      frameCount++;
+
+      if (gameRunning) {
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    playButton.addEventListener('click', () => {
+      resetGame();
+      gameLoop();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && gameRunning) {
+        bird.flap();
+      }
+    });
+
+    canvas.addEventListener('click', () => {
+      if (gameRunning) bird.flap();
+    });
+  </script>
+</body>
+</html>
