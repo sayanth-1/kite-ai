@@ -4,46 +4,11 @@
   <meta charset="UTF-8">
   <title>Kite AI Flappy Bird</title>
   <style>
-    body {
-      background: #f4f0e8;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    #gameContainer {
-      position: relative;
-      display: inline-block;
-      margin-top: 20px;
-    }
-    #gameCanvas {
-      background: #f4f0e8;
-      border-radius: 8px;
-      display: block;
-      margin: 0 auto;
-      box-shadow: 0 4px 24px #a3947a44;
-    }
-    #playButton {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 24px;
-      padding: 12px 24px;
-      cursor: pointer;
-      background-color: #a6947a;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      display: block;
-      z-index: 3;
-    }
-    #scoreDisplay {
-      margin-top: 10px;
-      font-size: 20px;
-      font-weight: bold;
-      color: #6b5e4a;
-    }
+    body { background: #f4f0e8; font-family: Arial, sans-serif; text-align: center; }
+    #gameContainer { position: relative; display: inline-block; margin-top: 20px; }
+    #gameCanvas { background: #f4f0e8; border-radius: 8px; display: block; margin: 0 auto; box-shadow: 0 4px 24px #a3947a44; }
+    #playButton { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; padding: 12px 24px; cursor: pointer; background-color: #a6947a; color: #fff; border: none; border-radius: 6px;}
+    #scoreDisplay { margin-top: 10px; font-size: 20px; font-weight: bold; color: #6b5e4a; }
   </style>
 </head>
 <body>
@@ -57,172 +22,99 @@
     const ctx = canvas.getContext('2d');
     const playButton = document.getElementById('playButton');
     const scoreDisplay = document.getElementById('scoreDisplay');
-
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
 
+    let birdImgLoaded = false;
+    let pipeImgLoaded = false;
     let gameRunning = false;
-    let score = 0;
-    let bird;
-    let pipes = [];
-    let gravity = 0.6;
-    let flapPower = -10;
-    let pipeSpeed = 3;
-    let pipeGap = 150;
-    let pipeWidth = 60;
-    let birdSize = 55;
-    let frameCount = 0;
+    let score = 0, bird, pipes = [], frameCount = 0;
+    let gravity = 0.6, flapPower = -10, pipeSpeed = 3, pipeGap = 150, pipeWidth = 60, birdSize = 55;
 
-    // Load images and ensure they're ready before game can start
     const birdImg = new Image();
     const pipeImg = new Image();
     birdImg.src = "./generated-image-2.jpg";
     pipeImg.src = "./generated-image-3.jpg";
 
-    let assetsLoaded = 0;
-    function checkAssetsLoaded() {
-      assetsLoaded++;
-      if (assetsLoaded === 2) {
-        // Allow play
-        playButton.disabled = false;
-      }
-    }
-    playButton.disabled = true;
-    birdImg.onload = checkAssetsLoaded;
-    pipeImg.onload = checkAssetsLoaded;
+    birdImg.onload = () => { birdImgLoaded = true; };
+    pipeImg.onload = () => { pipeImgLoaded = true; };
 
     function Bird() {
-      this.x = 80;
-      this.y = canvasHeight / 2;
-      this.velocity = 0;
-      this.draw = function () {
+      this.x = 80; this.y = canvasHeight/2; this.velocity = 0;
+      this.draw = () => {
         ctx.drawImage(birdImg, this.x, this.y, birdSize, birdSize);
       };
-      this.update = function () {
-        this.velocity += gravity;
-        this.y += this.velocity;
-        if (this.y + birdSize > canvasHeight) {
-          this.y = canvasHeight - birdSize;
-          this.velocity = 0;
-        }
-        if (this.y < 0) {
-          this.y = 0;
-          this.velocity = 0;
-        }
+      this.update = () => {
+        this.velocity += gravity; this.y += this.velocity;
+        if (this.y + birdSize > canvasHeight) { this.y = canvasHeight - birdSize; this.velocity = 0; }
+        if (this.y < 0) { this.y = 0; this.velocity = 0; }
       };
-      this.flap = function () {
-        this.velocity = flapPower;
-      };
+      this.flap = () => { this.velocity = flapPower; };
     }
 
     function Pipe(x, y, height, isTop) {
-      this.x = x;
-      this.y = y;
-      this.width = pipeWidth;
-      this.height = height;
-      this.isTop = isTop;
-      this.draw = function () {
-        // Use the pipes image – draw a part of it as the pipe for consistency
-        // Here, we'll just draw a vertical slice (for simplicity)
-        ctx.drawImage(pipeImg, 106, 0, 60, 250, this.x, this.y, this.width, this.height);
+      this.x = x; this.y = y; this.width = pipeWidth; this.height = height; this.isTop = isTop;
+      this.draw = () => {
+        // Draw a clipped vertical slice from the pipes image for each pipe
+        ctx.drawImage(pipeImg, 120, 100, pipeWidth, 400, this.x, this.y, this.width, this.height);
       };
-      this.update = function () {
-        this.x -= pipeSpeed;
-      };
+      this.update = () => { this.x -= pipeSpeed; };
     }
 
     function resetGame() {
-      score = 0;
-      bird = new Bird();
-      pipes = [];
-      frameCount = 0;
-      gameRunning = true;
-      scoreDisplay.textContent = 'Score: 0';
-      playButton.style.display = 'none';
+      bird = new Bird(); pipes = []; frameCount = 0; score = 0; gameRunning = true;
+      scoreDisplay.textContent = "Score: 0";
+      playButton.style.display = "none";
     }
 
-    function drawScore() {
-      scoreDisplay.textContent = `Score: ${score}`;
-    }
+    function drawScore() { scoreDisplay.textContent = `Score: ${score}`; }
 
     function checkCollision(pipe) {
-      if (
-        bird.x < pipe.x + pipe.width &&
-        bird.x + birdSize > pipe.x &&
-        bird.y < pipe.y + pipe.height &&
-        bird.y + birdSize > pipe.y
-      ) {
-        return true;
-      }
+      if (bird.x < pipe.x + pipe.width && bird.x + birdSize > pipe.x && bird.y < pipe.y + pipe.height && bird.y + birdSize > pipe.y) return true;
       return false;
     }
 
     function gameOver() {
       gameRunning = false;
-      playButton.style.display = 'block';
-      alert('Game Over! Your score: ' + score);
+      playButton.style.display = "block";
+      alert("Game Over! Your score: " + score);
     }
 
     function drawBackground() {
       ctx.fillStyle = "#f4f0e8";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      // Optional: draw faint pipes or abstract background here
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     }
 
     function gameLoop() {
       drawBackground();
-      bird.update();
-      bird.draw();
-
-      // Pipes
+      bird.update(); bird.draw();
       if (frameCount % 90 === 0) {
         const pipeHeightTop = Math.random() * (canvasHeight - pipeGap - 100) + 50;
         const pipeHeightBottom = canvasHeight - pipeGap - pipeHeightTop;
         pipes.push(new Pipe(canvasWidth, 0, pipeHeightTop, true));
         pipes.push(new Pipe(canvasWidth, canvasHeight - pipeHeightBottom, pipeHeightBottom, false));
       }
-
       pipes.forEach((pipe, index) => {
-        pipe.update();
-        pipe.draw();
-
-        if (pipe.x + pipe.width < 0) {
-          pipes.splice(index, 1);
-        }
-
-        if (checkCollision(pipe)) {
-          gameOver();
-        }
-
+        pipe.update(); pipe.draw();
+        if (pipe.x + pipe.width < 0) pipes.splice(index, 1);
+        if (checkCollision(pipe)) gameOver();
         if (pipe.isTop && pipe.x + pipe.width < bird.x && !pipe.passed) {
-          score++;
-          pipe.passed = true;
-          drawScore();
+          score++; pipe.passed = true; drawScore();
         }
       });
-
       frameCount++;
-
-      if (gameRunning) {
-        requestAnimationFrame(gameLoop);
-      }
+      if (gameRunning) requestAnimationFrame(gameLoop);
     }
 
     playButton.addEventListener('click', () => {
-      if (assetsLoaded !== 2) return; // guard for slow img loading
-      resetGame();
-      gameLoop();
-    });
-
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && gameRunning) {
-        bird.flap();
+      if (!birdImgLoaded || !pipeImgLoaded) {
+        alert("Images not loaded. Please wait a moment and try again.");
+        return;
       }
+      resetGame(); gameLoop();
     });
-
-    canvas.addEventListener('click', () => {
-      if (gameRunning) bird.flap();
-    });
+    window.addEventListener('keydown', e => { if (e.code === 'Space' && gameRunning) bird.flap(); });
+    canvas.addEventListener('click', () => { if (gameRunning) bird.flap(); });
   </script>
 </body>
 </html>
